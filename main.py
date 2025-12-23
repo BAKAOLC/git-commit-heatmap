@@ -75,15 +75,17 @@ def get_git_commits(repo_path: Path, repo_name: str = None, days: int = None,
         sys.exit(1)
 
 
-def generate_heatmap(commits: list[tuple[datetime, int, str]]) -> tuple[dict[tuple[datetime, int], int], dict[str, int]]:
+def generate_heatmap(commits: list[tuple[datetime, int, str]]) -> tuple[dict[tuple[datetime, int], int], dict[tuple[datetime, int], dict[str, int]], dict[str, int]]:
     heatmap = defaultdict(int)
+    repo_heatmap = defaultdict(lambda: defaultdict(int))
     repo_stats = defaultdict(int)
     
     for date, hour, repo_name in commits:
         heatmap[(date, hour)] += 1
+        repo_heatmap[(date, hour)][repo_name] += 1
         repo_stats[repo_name] += 1
     
-    return heatmap, repo_stats
+    return heatmap, repo_heatmap, repo_stats
 
 
 def print_heatmap_table(heatmap: dict[tuple[datetime, int], int], repo_stats: dict[str, int] = None):
@@ -185,7 +187,7 @@ def print_heatmap_table_plain(heatmap: dict[tuple[datetime, int], int], repo_sta
         print(f"最活跃时段: {date.strftime('%Y-%m-%d')} {hour}时 ({max_key[1]} 次提交)")
 
 
-def generate_html_heatmap(heatmap: dict[tuple[datetime, int], int], output_path: Path, repo_stats: dict[str, int] = None):
+def generate_html_heatmap(heatmap: dict[tuple[datetime, int], int], output_path: Path, repo_stats: dict[str, int] = None, repo_heatmap: dict[tuple[datetime, int], dict[str, int]] = None):
     if not heatmap:
         print("没有数据可显示")
         return
@@ -398,13 +400,114 @@ def generate_html_heatmap(heatmap: dict[tuple[datetime, int], int], output_path:
             margin: 0 1px;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             cursor: pointer;
+            position: relative;
         }
         
         .cell:hover {
-            transform: scale(1.2);
-            box-shadow: 0 0 8px rgba(88, 166, 255, 0.5);
-            z-index: 20;
-            position: relative;
+            transform: scale(1.1);
+            z-index: 10;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background-color: #161b22;
+            color: #c9d1d9;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: normal;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            border: 1px solid #30363d;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+            max-width: 320px;
+            min-width: 180px;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .tooltip-header {
+            font-weight: 600;
+            color: #58a6ff;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        
+        .tooltip-total {
+            color: #8b949e;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+            font-size: 12px;
+        }
+        
+        .tooltip-repos {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .tooltip-repo {
+            color: #c9d1d9;
+            text-align: left;
+            flex: 1;
+            font-size: 13px;
+        }
+        
+        .tooltip-count {
+            color: #58a6ff;
+            text-align: right;
+            font-weight: 500;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        
+        .tooltip::before {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 0;
+            border: 6px solid transparent;
+            border-top-color: #161b22;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .cell:hover .tooltip,
+        .cell.active .tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        @media (max-width: 768px) {
+            .tooltip {
+                font-size: 12px;
+                padding: 8px 10px;
+                max-width: 280px;
+                min-width: 160px;
+            }
+            
+            .tooltip-header {
+                font-size: 13px;
+            }
+            
+            .tooltip-repo,
+            .tooltip-count {
+                font-size: 12px;
+            }
         }
         
         .level-0 { background-color: #161b22; border: 1px solid #21262d; }
@@ -638,7 +741,17 @@ def generate_html_heatmap(heatmap: dict[tuple[datetime, int], int], output_path:
                 level = 4
             
             date_str = date.strftime("%Y-%m-%d")
-            html += f'                            <td><div class="cell level-{level}" title="{date_str} {hour}: {count} 次提交"></div></td>\n'
+            
+            if repo_heatmap and (date, hour) in repo_heatmap:
+                repo_details = repo_heatmap[(date, hour)]
+                repo_items = []
+                for repo_name, repo_count in sorted(repo_details.items()):
+                    repo_items.append(f'<div class="tooltip-row"><span class="tooltip-repo">{repo_name}</span><span class="tooltip-count">{repo_count} 次</span></div>')
+                tooltip_text = f'<div class="tooltip-header">{date_str} {hour}时</div><div class="tooltip-total">总计: {count} 次提交</div><div class="tooltip-repos">' + ''.join(repo_items) + '</div>'
+            else:
+                tooltip_text = f'<div class="tooltip-header">{date_str} {hour}时</div><div class="tooltip-total">总计: {count} 次提交</div>'
+            
+            html += f'                            <td><div class="cell level-{level}"><div class="tooltip">{tooltip_text}</div></div></td>\n'
         html += '                        </tr>\n'
     
     html += """                    </tbody>
@@ -759,6 +872,54 @@ def generate_html_heatmap(heatmap: dict[tuple[datetime, int], int], output_path:
             window.addEventListener('resize', throttledUpdate);
             updateYearPositions();
         }
+        
+        // Tooltip 处理
+        (function() {
+            const cells = document.querySelectorAll('.cell');
+            let activeCell = null;
+            
+            function hideTooltip() {
+                if (activeCell) {
+                    activeCell.classList.remove('active');
+                    activeCell = null;
+                }
+            }
+            
+            cells.forEach(cell => {
+                // 桌面端：鼠标悬停
+                cell.addEventListener('mouseenter', function() {
+                    hideTooltip();
+                    this.classList.add('active');
+                    activeCell = this;
+                });
+                
+                cell.addEventListener('mouseleave', function() {
+                    this.classList.remove('active');
+                    if (activeCell === this) {
+                        activeCell = null;
+                    }
+                });
+                
+                // 移动端：点击切换
+                cell.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (activeCell === this) {
+                        hideTooltip();
+                    } else {
+                        hideTooltip();
+                        this.classList.add('active');
+                        activeCell = this;
+                    }
+                });
+            });
+            
+            // 点击其他地方关闭 tooltip
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.cell')) {
+                    hideTooltip();
+                }
+            });
+        })();
     </script>
 </body>
 </html>"""
@@ -841,11 +1002,11 @@ def main():
     
     print(f"\n总共找到 {len(all_commits)} 个提交")
     
-    heatmap, repo_stats = generate_heatmap(all_commits)
+    heatmap, repo_heatmap, repo_stats = generate_heatmap(all_commits)
     
     if args.html:
         output_path = Path(args.html)
-        generate_html_heatmap(heatmap, output_path, repo_stats)
+        generate_html_heatmap(heatmap, output_path, repo_stats, repo_heatmap)
     else:
         if sys.stdout.isatty():
             print_heatmap_table(heatmap, repo_stats)
