@@ -31,6 +31,8 @@ def get_git_commits(repo_path: Path, repo_name: str = None, days: int = None,
             cwd=repo_path,
             capture_output=True,
             text=True,
+            encoding='utf-8',
+            errors='replace',
             check=True,
         )
         
@@ -38,6 +40,9 @@ def get_git_commits(repo_path: Path, repo_name: str = None, days: int = None,
         cutoff_date = None
         if days:
             cutoff_date = datetime.now() - timedelta(days=days)
+        
+        if not result.stdout:
+            return commits
         
         for line in result.stdout.strip().split("\n"):
             if not line:
