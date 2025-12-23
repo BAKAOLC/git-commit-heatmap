@@ -144,7 +144,7 @@ def print_heatmap_table(heatmap: dict[tuple[datetime, int], int], repo_stats: di
     if heatmap:
         max_key = max(heatmap.items(), key=lambda x: x[1])
         date, hour = max_key[0]
-        print(f"最活跃时段: {date.strftime('%Y-%m-%d')} {hour} ({max_key[1]} 次提交)")
+        print(f"最活跃时段: {date.strftime('%Y-%m-%d')} {hour}时 ({max_key[1]} 次提交)")
 
 
 def print_heatmap_table_plain(heatmap: dict[tuple[datetime, int], int], repo_stats: dict[str, int] = None):
@@ -182,7 +182,7 @@ def print_heatmap_table_plain(heatmap: dict[tuple[datetime, int], int], repo_sta
     if heatmap:
         max_key = max(heatmap.items(), key=lambda x: x[1])
         date, hour = max_key[0]
-        print(f"最活跃时段: {date.strftime('%Y-%m-%d')} {hour} ({max_key[1]} 次提交)")
+        print(f"最活跃时段: {date.strftime('%Y-%m-%d')} {hour}时 ({max_key[1]} 次提交)")
 
 
 def generate_html_heatmap(heatmap: dict[tuple[datetime, int], int], output_path: Path, repo_stats: dict[str, int] = None):
@@ -271,6 +271,12 @@ def generate_html_heatmap(heatmap: dict[tuple[datetime, int], int], output_path:
             background-color: #161b22;
         }
         
+        thead tr:first-child {
+            position: sticky;
+            top: 0;
+            z-index: 11;
+        }
+        
         th {
             padding: 8px 4px;
             text-align: center;
@@ -279,6 +285,15 @@ def generate_html_heatmap(heatmap: dict[tuple[datetime, int], int], output_path:
             font-size: clamp(10px, 1.2vw, 12px);
             white-space: nowrap;
             border-bottom: 2px solid #30363d;
+            border-right: 1px solid #21262d;
+        }
+        
+        th.date-header {
+            border-right: 1px solid #30363d;
+        }
+        
+        th:last-child {
+            border-right: none;
         }
         
         th:first-child {
@@ -287,12 +302,42 @@ def generate_html_heatmap(heatmap: dict[tuple[datetime, int], int], output_path:
             min-width: 35px;
         }
         
+        th.year-header {
+            background-color: #0d1117;
+            border-bottom: 1px solid #30363d;
+            border-right: 1px solid #30363d;
+            padding: 10px 0;
+            position: relative;
+            overflow: visible;
+        }
+        
+        th.year-header:last-child {
+            border-right: none;
+        }
+        
+        th.year-header .year-text {
+            font-weight: 600;
+            font-size: clamp(11px, 1.4vw, 14px);
+            color: #58a6ff;
+            white-space: nowrap;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        th.year-header .year-text.visible {
+            opacity: 1;
+        }
+        
         tbody tr:first-child td {
             padding-top: 8px;
         }
         
         td {
-            padding: 3px 2px;
+            padding: 3px 2px 3px 2px;
             text-align: center;
             vertical-align: middle;
             border-right: 1px solid #21262d;
@@ -308,14 +353,10 @@ def generate_html_heatmap(heatmap: dict[tuple[datetime, int], int], output_path:
             background-color: #0d1117;
         }
         
-        tbody tr:nth-child(even) td:first-child {
-            background-color: #0d1117;
-        }
-        
         td:first-child {
             color: #8b949e;
             font-weight: 500;
-            padding: 1px 2px 1px 0;
+            padding: 3px 6px 3px 0;
             font-size: clamp(11px, 1.3vw, 13px);
             position: sticky;
             left: 0;
@@ -326,12 +367,26 @@ def generate_html_heatmap(heatmap: dict[tuple[datetime, int], int], output_path:
             line-height: 1.2;
             width: 30px;
             max-width: 30px;
-            border-right: 1px solid #30363d;
+        }
+        
+        td:first-child::after {
+            content: '';
+            position: absolute;
+            right: -1px;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background-color: #30363d;
+            z-index: 6;
+            pointer-events: none;
         }
         
         tbody tr:nth-child(even) td:first-child {
             background-color: #0d1117;
-            border-right: 1px solid #30363d;
+        }
+        
+        tbody tr:nth-child(even) td:first-child::after {
+            background-color: #30363d;
         }
         
         .cell {
@@ -435,13 +490,25 @@ def generate_html_heatmap(heatmap: dict[tuple[datetime, int], int], output_path:
             }
             
             td {
-                padding: 1px;
+                padding: 2px 2px 4px 2px;
+                text-align: center;
+                vertical-align: middle;
+                border-right: 1px solid #21262d;
+                height: auto;
+                line-height: 1;
             }
             
             td:first-child {
-                padding-right: 2px;
+                padding: 2px 4px 4px 0;
                 width: 25px;
                 max-width: 25px;
+                vertical-align: middle;
+                line-height: 1.2;
+            }
+            
+            .cell {
+                vertical-align: middle;
+                margin-top: -1px;
             }
             
             th:first-child {
@@ -460,14 +527,26 @@ def generate_html_heatmap(heatmap: dict[tuple[datetime, int], int], output_path:
             }
             
             td {
-                padding: 1px;
+                padding: 2px 2px 4px 2px;
+                text-align: center;
+                vertical-align: middle;
+                border-right: 1px solid #21262d;
+                height: auto;
+                line-height: 1;
             }
             
             td:first-child {
                 font-size: 10px;
-                padding: 1px 2px 1px 0;
+                padding: 2px 4px 4px 0;
                 width: 22px;
                 max-width: 22px;
+                vertical-align: middle;
+                line-height: 1.2;
+            }
+            
+            .cell {
+                vertical-align: middle;
+                margin-top: -1px;
             }
             
             th:first-child {
@@ -496,12 +575,47 @@ def generate_html_heatmap(heatmap: dict[tuple[datetime, int], int], output_path:
                 <table>
                     <thead>
                         <tr>
+                            <th class="year-header"></th>
+"""
+    
+    from collections import defaultdict
+    year_counts = defaultdict(int)
+    for date in dates:
+        year = date.year
+        year_counts[year] += 1
+    
+    current_year = None
+    year_start_idx = 0
+    year_colspans = []
+    for i, date in enumerate(dates):
+        year = date.year
+        if year != current_year:
+            if current_year is not None:
+                colspan = i - year_start_idx
+                year_colspans.append((current_year, colspan))
+            current_year = year
+            year_start_idx = i
+    
+    if current_year is not None:
+        colspan = len(dates) - year_start_idx
+        year_colspans.append((current_year, colspan))
+    
+    for year, colspan in year_colspans:
+        html += f'                            <th class="year-header" colspan="{colspan}"><span class="year-text">{year}</span></th>\n'
+    
+    html += """                        </tr>
+                        <tr>
                             <th></th>
 """
     
-    for date in dates:
+    prev_year = None
+    for i, date in enumerate(dates):
         date_str = date.strftime("%m-%d")
-        html += f'                            <th>{date_str}</th>\n'
+        current_year = date.year
+        is_year_boundary = prev_year is not None and current_year != prev_year
+        class_attr = ' class="date-header"' if is_year_boundary else ''
+        html += f'                            <th{class_attr}>{date_str}</th>\n'
+        prev_year = current_year
     
     html += """                        </tr>
                     </thead>
@@ -551,7 +665,7 @@ def generate_html_heatmap(heatmap: dict[tuple[datetime, int], int], output_path:
     if heatmap:
         max_key = max(heatmap.items(), key=lambda x: x[1])
         date, hour = max_key[0]
-        html += f'            <p>最活跃时段: <strong>{date.strftime("%Y-%m-%d")} {hour}</strong> ({max_key[1]} 次提交)</p>\n'
+        html += f'            <p>最活跃时段: <strong>{date.strftime("%Y-%m-%d")} {hour}时</strong> ({max_key[1]} 次提交)</p>\n'
     
     html += """        </div>
         
@@ -564,6 +678,88 @@ def generate_html_heatmap(heatmap: dict[tuple[datetime, int], int], output_path:
             <div class="legend-item"><div class="cell level-4"></div><span>很多</span></div>
         </div>
     </div>
+    <script>
+        let rafId = null;
+        
+        function updateYearPositions() {
+            if (rafId) {
+                cancelAnimationFrame(rafId);
+            }
+            
+            rafId = requestAnimationFrame(() => {
+                const yearHeaders = document.querySelectorAll('th.year-header');
+                const heatmap = document.querySelector('.heatmap');
+                if (!heatmap) return;
+                
+                const heatmapRect = heatmap.getBoundingClientRect();
+                const viewportWidth = heatmapRect.width;
+                const viewportLeft = heatmapRect.left;
+                
+                yearHeaders.forEach(header => {
+                    const text = header.querySelector('.year-text');
+                    if (!text) return;
+                    
+                    const headerRect = header.getBoundingClientRect();
+                    const headerLeft = headerRect.left - viewportLeft;
+                    const headerRight = headerLeft + headerRect.width;
+                    const headerWidth = headerRect.width;
+                    const textWidth = text.scrollWidth;
+                    
+                    if (headerLeft < 0 && headerRight < 0) {
+                        text.classList.remove('visible');
+                        return;
+                    }
+                    
+                    if (headerLeft > viewportWidth) {
+                        text.classList.remove('visible');
+                        return;
+                    }
+                    
+                    if (textWidth > headerWidth) {
+                        text.classList.remove('visible');
+                        return;
+                    }
+                    
+                    const visibleLeft = Math.max(0, headerLeft);
+                    const visibleRight = Math.min(viewportWidth, headerRight);
+                    const visibleWidth = visibleRight - visibleLeft;
+                    
+                    if (visibleWidth < textWidth) {
+                        text.classList.remove('visible');
+                        return;
+                    }
+                    
+                    const centerX = visibleLeft + visibleWidth / 2;
+                    const headerCenterX = headerLeft + headerWidth / 2;
+                    const offsetX = centerX - headerCenterX;
+                    
+                    text.style.left = '50%';
+                    text.style.transform = `translate(calc(-50% + ${offsetX}px), -50%)`;
+                    text.classList.add('visible');
+                });
+                
+                rafId = null;
+            });
+        }
+        
+        const heatmap = document.querySelector('.heatmap');
+        if (heatmap) {
+            let ticking = false;
+            const throttledUpdate = () => {
+                if (!ticking) {
+                    ticking = true;
+                    updateYearPositions();
+                    requestAnimationFrame(() => {
+                        ticking = false;
+                    });
+                }
+            };
+            
+            heatmap.addEventListener('scroll', throttledUpdate, { passive: true });
+            window.addEventListener('resize', throttledUpdate);
+            updateYearPositions();
+        }
+    </script>
 </body>
 </html>"""
     
