@@ -1,0 +1,7 @@
+[project]
+name = "git-commit-heatmap"
+version = "0.1.0"
+description = "生成 Git 提交时间网格表工具"
+requires-python = ">=3.8"
+dependencies = []
+
